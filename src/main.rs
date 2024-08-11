@@ -14,7 +14,7 @@ fn main() {
     
     let start = SystemTime::now();
     // See if there is any remainder and if so, run that number of iterations
-    let remainder = TOTAL_ITERATIONS - (runs_per_thread.checked_mul(THREAD_COUNT as u32).unwrap());
+    let remainder = TOTAL_ITERATIONS - (runs_per_thread * THREAD_COUNT as u32);
     for _ in 0..remainder {
         let count = get_paralysis_count();
         if (count as u8) > max {
