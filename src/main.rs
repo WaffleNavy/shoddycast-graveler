@@ -1,6 +1,5 @@
 use rand::{distributions::Standard, thread_rng, Rng};
 use std::time::SystemTime;
-use std::sync::mpsc;
 use std::thread;
 
 const TOTAL_ITERATIONS: u32 = 1_000_000_000;
@@ -9,7 +8,6 @@ const THREAD_COUNT: u8 = 10;
 
 fn main() {
     let mut max: u8 = 0;
-    let (send, recv) = mpsc::channel();
     let runs_per_thread = TOTAL_ITERATIONS / THREAD_COUNT as u32;
     
     let start = SystemTime::now();
@@ -23,30 +21,27 @@ fn main() {
     }
     
     // Spawn & run threads
+    let mut threads = vec![];
     for _ in 0..THREAD_COUNT {
         let rpt = runs_per_thread.clone();
-        let sender = send.clone();
-        thread::spawn(move || {
+        let t_tmp = thread::spawn(move || {
+            let mut max = 0;
             for _ in 0..rpt {
                 let count = get_paralysis_count();
-                sender.send(count).unwrap();
+                if count > max {
+                    max = count;
+                }
             }
+            return max
         });
+        threads.push(t_tmp);
     }
     
-    // Explicitly drop our own reference to the send channel, so that only the threads have access to it,
-    // this prevents an indefinite block in the following loop
-    drop(send);
-
-    // Receive results from threads, continues running until all results from all threads have been processed
-    loop {
-        let outcome = recv.recv();
-        if let Err(_) = outcome {
-            break;
-        }
-        let value = outcome.unwrap();
-        if (value as u8) > max {
-            max = value as u8;
+    let mut max = 0;
+    for thread in threads {
+        let t_max = thread.join().unwrap_or(0);
+        if t_max > max {
+            max = t_max;
         }
     }
 
